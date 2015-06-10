@@ -3,11 +3,18 @@ __author__ = 'jean'
 
 import sys, os
 
-def scan_dir(start_dir):
+def scan_dir(start_dir, cur_dt_fmt):
     try:
         for root, dirs, files in os.walk(start_dir):
             for dir in dirs:
-                print("Found this directory: %s" % dir)
+                print("Found this directory: %s" % dir, end='')
+                if cur_dt_fmt == 'MDY':
+                    mm, dd, yyyy = dir.split('-')
+                else:
+                    dd, mm, yyyy = dir.split('-')
+                new_dir = yyyy + '-' + mm + '-' + dd
+                print(" New name: %s" % new_dir)
+                os.rename(os.path.join(root, dir), os.path.join(root, new_dir))
     except OSError as e:
         print("OS error: {0}".format(e))
 
@@ -24,7 +31,7 @@ def main():
         return 8
     print("Dossier de depart: %s" % start_dir)
     print("Format initial...: %s" % cur_dt_fmt)
-    scan_dir(start_dir)
+    scan_dir(start_dir, cur_dt_fmt)
     return 0
 
 if __name__ == "__main__":
