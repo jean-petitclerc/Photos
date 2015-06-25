@@ -10,13 +10,38 @@ class Photo(object):
         self.photo_name = photo_name
         self.dir_name = dir_name
         self.file_name = file_name
+        self.exif_datetime_original = None
+        self.exif_image_length = None
+        self.exif_image_width = None
+        self.exif_exposure_time = None
+        self.exif_f_number = None
+        self.exif_focal_length = None
+        self.exif_iso_speed = None
+        self.exif_unique_id = None
+        self.gps_latitude = None
+        self.gps_latitude_ref = None
+        self.gps_longitude = None
+        self.gps_longitude_ref = None
+        self.image_datetime  = None
+        self.camera_make = None
+        self.camera_model = None
+        self.orientation = None
 
     def __repr__(self):
-        return "Photo:\n  Name................" + self.photo_name + \
-               "\n  Date................" + self.photo_date       + \
-               "\n  Path................" + self.dir_name         + \
-               "\n  File................" + self.file_name        + \
-               "\n"
+        return "Photo:\n" + \
+               "  Name................" + self.photo_name + "\n"      + \
+               "  Date................" + self.photo_date + "\n"      + \
+               "  Path................" + self.dir_name   + "\n"      + \
+               "  File................" + self.file_name  + "\n"      + \
+               "  EXIF DateTime......." + self.exif_datetime_original + "\n" + \
+               "  EXIF Image Length..." + self.exif_image_length      + "\n" + \
+               "  EXIF Image Width...." + self.exif_image_width       + "\n" + \
+               "  EXIF Exposure Time.." + self.exif_exposure_time     + "\n" + \
+               "  EXIF F Number......." + self.exif_f_number          + "\n" + \
+               "  EXIF Focal Length..." + self.exif_focal_length      + "\n" + \
+               "  EXIF ISO Speed......" + self.exif_iso_speed         + "\n" + \
+               "  EXIF Unique ID......" + self.exif_unique_id         + "\n"
+
 
     def consolidate_properties(self):
         pass
@@ -71,14 +96,32 @@ def filter_exif_data(key, value, photo):
         photo.exif_image_length = value
     elif key == "EXIF ExifImageWidth":
         photo.exif_image_width = value
+    elif key == "EXIF ExposureTime":
+        photo.exif_exposure_time = value
+    elif key == "EXIF FNumber":
+        photo.exif_f_number = value
+    elif key == "EXIF FocalLength":
+        photo.exif_focal_length = value
+    elif key == "EXIF ISOSpeedRatings":
+        photo.exif_iso_speed = value
     elif key == "EXIF ImageUniqueID":
         photo.exif_unique_id = value
+    elif key == "GPS GPSLatitude":
+        photo.gps_latitude = value
+    elif key == "GPS GPSLatitudeRef":
+        photo.gps_latitude_ref = value
+    elif key == "GPSLongitude":
+        photo.gps_longitude = value
+    elif key == "GPSLongitudeRef":
+        photo.gps_longitude_ref = value
     elif key == "Image DateTime":
         photo.image_datetime  = value
     elif key == "Image Make":
         photo.camera_make = value
     elif key == "Image Model":
         photo.camera_model = value
+    elif key == "Image Orientation":
+        photo.orientation = value
     else:
         pass
 
