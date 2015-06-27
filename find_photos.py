@@ -3,6 +3,7 @@ __author__ = 'Jean'
 
 import os, sys
 import exifread
+import sqlite3
 
 class Photo(object):
     def __init__(self, photo_date, photo_name, dir_name, file_name):
