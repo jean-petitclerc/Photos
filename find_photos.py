@@ -114,23 +114,47 @@ class Photo(object):
 
     def consolidate_properties(self):
         # Fix timestamp format
-        (temp_date, temp_time) = self.exif_datetime_original.split()
-        temp_date_date = temp_date.replace(':', '-')
-        self.exif_datetime_original = temp_date + ' ' + temp_time
+        if self.exif_datetime_original != None:
+            (temp_date, temp_time) = self.exif_datetime_original.split()
+            temp_date = temp_date.replace(':', '-')
+            self.exif_datetime_original = temp_date + ' ' + temp_time
+
         # Fix timestamp format
-        (temp_date, temp_time) = self.image_datetime.split()
-        temp_date = temp_date.replace(':', '-')
-        self.image_datetime = temp_date + ' ' + temp_time
+        if self.image_datetime != None:
+            (temp_date, temp_time) = self.image_datetime.split()
+            temp_date = temp_date.replace(':', '-')
+            self.image_datetime = temp_date + ' ' + temp_time
+
         # Reformat GPS Lat/Lon
         if self.gps_latitude != None:
-            self.gps_lat = str(self.gps_latitude[0]) + '.' + str(self.gps_latitude[1])
-            min_sec = float(self.gps_latitude[2].num) / float(self.gps_latitude[2].den)
-            self.gps_lat = self.gps_lat + '.' + str(min_sec) + self.gps_latitude_ref
+            self.gps_lat = str(self.gps_latitude[0]) + '.'
+            if self.gps_latitude[1].den == 1:
+                self.gps_lat += str(self.gps_latitude[1])
+                self.gps_lat += '.'
+                min_sec = float(self.gps_latitude[2].num) / float(self.gps_latitude[2].den)
+            else:
+                min_sec = float(self.gps_latitude[1].num) / float(self.gps_latitude[1].den)
+            self.gps_lat += str(min_sec)
+            self.gps_lat += self.gps_latitude_ref
         if self.gps_longitude != None:
-            self.gps_lon = str(self.gps_longitude[0]) + '.' + str(self.gps_longitude[1])
-            min_sec = float(self.gps_longitude[2].num) / float(self.gps_longitude[2].den)
-            self.gps_lon = self.gps_lon + '.' + str(min_sec) + self.gps_longitude_ref
+            self.gps_lon = str(self.gps_longitude[0]) + '.'
+            if self.gps_longitude[1].den == 1:
+                self.gps_lon += str(self.gps_longitude[1])
+                self.gps_lon += '.'
+                min_sec = float(self.gps_longitude[2].num) / float(self.gps_longitude[2].den)
+            else:
+                min_sec = float(self.gps_longitude[1].num) / float(self.gps_longitude[1].den)
+            self.gps_lon += str(min_sec)
+            self.gps_lon += self.gps_longitude_ref
 
+        # Try hard to find a date
+        if self.photo_date == '0001-01-01':
+            if self.image_datetime != None:
+                self.photo_date = self.image_datetime[0:10]
+            elif self.exif_datetime_original != None:
+                self.photo_date = self.exif_datetime_original[0:10]
+            else:
+                print("No date found for this photo: " + self.photo_name)
 
 def get_exif_data(photo_dir, photo_file):
     print("Dossier de la photo: %s" % photo_dir)
@@ -148,7 +172,7 @@ def get_exif_data(photo_dir, photo_file):
         #print("Got>",key,"< : >",val,"<")
         photo.set_exif_data(key, val)
     print("*** fin de la liste")
-    print(photo)
+    #print(photo)
     photo.consolidate_properties()
     print(photo)
     db_record_photo(photo)
@@ -170,25 +194,60 @@ def db_record_photo(photo):
          where photo_date = ?
            and photo_name = ?
     '''
-    cur = conn.cursor()
-    cur.execute(select, [photo.photo_date, photo.photo_name])
-    row = cur.fetchone()
-    if row == None:
-        ins = conn.cursor()
-        ins.execute(insert, [photo.photo_date, photo.photo_name, photo.file_name, photo.exif_image_length,
-                             photo.exif_image_width, photo.image_datetime, photo.gps_lat, photo.gps_lon,
-                             photo.camera_make, photo.camera_model, photo.orientation])
-    else:
-        if (row[0] == photo.exif_image_length) and (row[1] == photo.exif_image_width):
-            print("Photo is already in the database")
+
+    try:
+        cur = conn.cursor()
+        cur.execute(select, [photo.photo_date, photo.photo_name])
+        row = cur.fetchone()
+        if row == None:
+            ins = conn.cursor()
+            ins.execute(insert, [photo.photo_date, photo.photo_name, photo.file_name, photo.exif_image_length,
+                                 photo.exif_image_width, photo.image_datetime, photo.gps_lat, photo.gps_lon,
+                                 photo.camera_make, photo.camera_model, photo.orientation])
+            db_record_location(photo)
         else:
-            print("Error: Same photo but different size")
-            print("Photo date...: " + photo.photo_date)
-            print("Photo name...: " + photo.photo_name)
-            print("In DB, length: " + str(row[0]))
-            print("        width: " + str(row[1]))
-            print("New, length..: " + str(photo.exif_image_length))
-            print("     width...: " + str(photo.exif_image_width))
+            if (row[0] == photo.exif_image_length) and (row[1] == photo.exif_image_width):
+                print("Photo is already in the database")
+                db_record_location(photo)
+            else:
+                print("Error: Same photo but different size")
+                print("Photo date...: " + photo.photo_date)
+                print("Photo name...: " + photo.photo_name)
+                print("In DB, length: " + str(row[0]))
+                print("        width: " + str(row[1]))
+                print("New, length..: " + str(photo.exif_image_length))
+                print("     width...: " + str(photo.exif_image_width))
+    except sqlite3.Error as x:
+       print("SQL Error: \n" + str(x) )
+
+def db_record_location(photo):
+    select = \
+    '''
+        select count(*)
+          from photo_location
+         where photo_date = ?
+           and photo_name = ?
+           and dir_name   = ?
+    '''
+    insert = \
+    '''
+        insert into photo_location(photo_date, photo_name, dir_name)
+            values(?, ?, ?)
+    '''
+
+    try:
+        cur = conn.cursor()
+        cur.execute(select, [photo.photo_date, photo.photo_name, photo.dir_name])
+        row = cur.fetchone()
+        if row[0] == 0:
+            print("New location for photo: " + photo.dir_name)
+            ins = conn.cursor()
+            ins.execute(insert, [photo.photo_date, photo.photo_name, photo.dir_name])
+        else:
+            print("Location already in the DB: " + photo.dir_name)
+
+    except sqlite3.Error as x:
+       print("SQL Error: \n" + str(x) )
 
 def get_date_from_dir(path):
     import re
