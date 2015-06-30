@@ -1,7 +1,9 @@
 __author__ = 'Jean'
 # -*- coding: utf-8 -*-
+#TODO : Implement configuration file
 
 import os, sys, shutil
+from optparse import OptionParser
 import exifread
 import sqlite3
 
@@ -312,19 +314,37 @@ def scan_dir(start_dir):
     print("Fichiers autres trouvés: %i" % count_others)
 
 
+def parse_options():
+    # Use optparse to get parms
+    usage = "usage: %prog [options] starting_directory"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-c", "--copy", dest="copy", action="store_true", default=False,
+                      help="Copy the photo to the expected location if needed.")
+    (options, args) = parser.parse_args()
+    return (options, args) # options: copy; args: starting_directory
+
+
 def main():
     global parm_copy, conn
-    if (len(sys.argv) - 1) < 1:
+    print("Starting " + sys.argv[0] + "\n")
+    # Get parameters and validate them
+    (options, args) = parse_options()
+    parm_copy = options.copy
+    if len(args) < 1:
         print("Ce programme a besoin d'un argument, le dossier de départ.")
         return 8
-    start_dir = sys.argv[1]
-    if sys.argv[2].upper() == 'COPY=YES':
-        parm_copy = True
-    print("Dossier de départ: %s" % start_dir)
+    start_dir = args[0]
+    print("Paramètres:")
+    print("    Dossier de départ.........: %s" % start_dir)
+    print("    Option de copie...........: ", end='')
+    print("On" if parm_copy else "Off")
+    print()
+
     conn = sqlite3.connect('data/photos.db')
     scan_dir(start_dir)
     conn.commit()
     conn.close()
+    print("\nEnding " + sys.argv[0] + "\n")
     return 0
 
 
