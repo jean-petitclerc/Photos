@@ -1,19 +1,26 @@
 __author__ = 'Jean'
 # -*- coding: utf-8 -*-
-#TODO : Implement configuration file
 
-import os, sys, shutil
+import os
+import sys
+import shutil
 from optparse import OptionParser
-import exifread
+import configparser
 import sqlite3
+import exifread
+
 
 # Global variable
-# parms
-parm_copy = False
+config = {}
 conn = None  # DB handle
 
+
 # Global constant
-MASTER_LOCATION = "c:\\backup\\Photos\\"
+CONFIG_FILE = 'config' + os.sep + 'photos.cfg'
+
+
+# parms
+parm_copy = False
 
 
 class Photo(object):
@@ -264,20 +271,23 @@ def db_record_location(photo):
 
 
 def copy_to_master_location(photo):
-    global MASTER_LOCATION, parm_copy
-    master_dir_name = MASTER_LOCATION + photo.photo_date
+    global config, parm_copy
+    master_location = config['master_location']
+    master_dir_name = master_location + photo.photo_date
+    print("Current location....: " + photo.dir_name)
+    print("Expected location...: " + master_dir_name)
     if master_dir_name != photo.dir_name:
-        print("Photo not found in master location")
-        print("Photo Date..........: " + photo.photo_date)
-        print("Photo Name..........: " + photo.photo_name)
-        print("Current location....: " + photo.dir_name)
-        print("Expected location...: " + master_dir_name)
-        if parm_copy:
-            src_file = photo.dir_name + os.sep + photo.file_name
-            dst_file = master_dir_name + os.sep + photo.file_name
-            if not os.path.isdir(master_dir_name):
-                os.mkdir(master_dir_name)
-            if not os.path.isfile(master_dir_name + os.sep + photo.file_name):
+        print("Checking if the photo is in the master location...", end='')
+        if os.path.isfile(master_dir_name + os.sep + photo.file_name):
+            print("Yes")
+        else:
+            print("No")
+            if parm_copy:
+                print("Copy to master location is turned on. Photo will be copied.")
+                src_file = photo.dir_name + os.sep + photo.file_name
+                dst_file = master_dir_name + os.sep + photo.file_name
+                if not os.path.isdir(master_dir_name):
+                    os.mkdir(master_dir_name)
                 print("Copying from: " + src_file)
                 print("          to: " + dst_file)
                 shutil.copy2(src_file, dst_file)
@@ -321,11 +331,24 @@ def parse_options():
     parser.add_option("-c", "--copy", dest="copy", action="store_true", default=False,
                       help="Copy the photo to the expected location if needed.")
     (options, args) = parser.parse_args()
-    return (options, args) # options: copy; args: starting_directory
+    return options, args  # options: copy; args: starting_directory
+
+
+def parse_configs():
+    global config
+    try:
+        cfg_parser = configparser.ConfigParser()
+        cfg_parser.read(CONFIG_FILE)
+        config['master_location'] = cfg_parser['default']['MASTER_LOCATION']
+        config['db_file'] = cfg_parser['database']['DB_FILE']
+    except Exception as x:
+        print("Error: Could not read the configuration file: " + CONFIG_FILE)
+        print(x)
+    return config
 
 
 def main():
-    global parm_copy, conn
+    global parm_copy, conn, config
     print("Starting " + sys.argv[0] + "\n")
     # Get parameters and validate them
     (options, args) = parse_options()
@@ -340,7 +363,20 @@ def main():
     print("On" if parm_copy else "Off")
     print()
 
-    conn = sqlite3.connect('data/photos.db')
+    config = parse_configs()
+    print("Configurations:")
+    if config['master_location'] is None:
+        print("Error: The MASTER_LOCATION is missing from the [default] section in " + CONFIG_FILE)
+        return 8
+    if config['db_file'] is None:
+        print("Error: The DB_FILE is missing from the [database] section in " + CONFIG_FILE)
+        return 8
+    print("    Fichier de configuration..: " + CONFIG_FILE)
+    print("    Master Location...........: " + config['master_location'])
+    print("    Database file.............: " + config['db_file'])
+    print()
+
+    conn = sqlite3.connect(config['db_file'])
     scan_dir(start_dir)
     conn.commit()
     conn.close()
