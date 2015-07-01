@@ -104,28 +104,28 @@ class Photo(object):
         l_camera_model = self.camera_model or "Not defined"
         l_orientation = self.orientation or "Not defined"
         return "Photo:\n" + \
-               "  Name................: " + self.photo_name + "\n" + \
-               "  Date................: " + self.photo_date + "\n" + \
-               "  Path................: " + self.dir_name + "\n" + \
-               "  File................: " + self.file_name + "\n" + \
-               "  EXIF DateTime.......: " + l_exif_datetime_original + "\n" + \
-               "  EXIF Image Length...: " + str(l_exif_image_length) + "\n" + \
-               "  EXIF Image Width....: " + str(l_exif_image_width) + "\n" + \
-               "  EXIF Exposure Time..: " + l_exif_exposure_time + "\n" + \
-               "  EXIF F Number.......: " + l_exif_f_number + "\n" + \
-               "  EXIF Focal Length...: " + l_exif_focal_length + "\n" + \
-               "  EXIF ISO Speed......: " + l_exif_iso_speed + "\n" + \
-               "  EXIF Unique ID......: " + l_exif_unique_id + "\n" + \
-               "  GPS Latitude........: " + l_gps_latitude + "\n" + \
-               "  GPS Latitude Ref....: " + l_gps_latitude_ref + "\n" + \
-               "  GPS Latitude (fixed): " + l_gps_lat + "\n" + \
-               "  GPS Longitude.......: " + l_gps_longitude + "\n" + \
-               "  GPS Longitude Ref...: " + l_gps_longitude_ref + "\n" + \
-               "  GPS Longitude(fixed): " + l_gps_lon + "\n" + \
-               "  Image DateTime......: " + l_image_datetime + "\n" + \
-               "  Camera Make.........: " + l_camera_make + "\n" + \
-               "  Camera Model........: " + l_camera_model + "\n" + \
-               "  Image Orientation...: " + l_orientation + "\n"
+               "    Name.........................................: " + self.photo_name + "\n" + \
+               "    Date.........................................: " + self.photo_date + "\n" + \
+               "    Path.........................................: " + self.dir_name + "\n" + \
+               "    File.........................................: " + self.file_name + "\n" + \
+               "    EXIF DateTime................................: " + l_exif_datetime_original + "\n" + \
+               "    EXIF Image Length............................: " + str(l_exif_image_length) + "\n" + \
+               "    EXIF Image Width.............................: " + str(l_exif_image_width) + "\n" + \
+               "    EXIF Exposure Time...........................: " + l_exif_exposure_time + "\n" + \
+               "    EXIF F Number................................: " + l_exif_f_number + "\n" + \
+               "    EXIF Focal Length............................: " + l_exif_focal_length + "\n" + \
+               "    EXIF ISO Speed...............................: " + l_exif_iso_speed + "\n" + \
+               "    EXIF Unique ID...............................: " + l_exif_unique_id + "\n" + \
+               "    GPS Latitude.................................: " + l_gps_latitude + "\n" + \
+               "    GPS Latitude Ref.............................: " + l_gps_latitude_ref + "\n" + \
+               "    GPS Latitude (fixed).........................: " + l_gps_lat + "\n" + \
+               "    GPS Longitude................................: " + l_gps_longitude + "\n" + \
+               "    GPS Longitude Ref............................: " + l_gps_longitude_ref + "\n" + \
+               "    GPS Longitude(fixed).........................: " + l_gps_lon + "\n" + \
+               "    Image DateTime...............................: " + l_image_datetime + "\n" + \
+               "    Camera Make..................................: " + l_camera_make + "\n" + \
+               "    Camera Model.................................: " + l_camera_model + "\n" + \
+               "    Image Orientation............................: " + l_orientation + "\n"
 
     def consolidate_properties(self):
         # Fix timestamp format
@@ -174,8 +174,8 @@ class Photo(object):
 
 def get_exif_data(photo_dir, photo_file):
     global parm_copy
-    print("Dossier de la photo: %s" % photo_dir)
-    print("Nom de la photo....: %s" % photo_file)
+    print("Dossier de la photo..............................: %s" % photo_dir)
+    print("Nom de la photo..................................: %s" % photo_file)
     photo_date = get_date_from_dir(photo_dir)
     photo_temp = os.path.basename(photo_file)
     photo_name, photo_ext = os.path.splitext(photo_temp)
@@ -183,12 +183,12 @@ def get_exif_data(photo_dir, photo_file):
     photo_path = os.path.join(photo_dir, photo_file)
     f = open(photo_path, 'rb')
     tags = exifread.process_file(f, details=False)
-    print("Liste des tags")
+    # print("Liste des tags")
     for key in sorted(tags.keys()):
         val = tags[key]
         # print("Got>",key,"< : >",val,"<")
         photo.set_exif_data(key, val)
-    print("*** fin de la liste")
+    # print("*** fin de la liste")
     # print(photo)
     photo.consolidate_properties()
     print(photo)
@@ -215,27 +215,28 @@ def db_record_photo(photo):
         '''
 
     try:
+        print("Checking if the photo is in the database.........: ", end='')
         cur = conn.cursor()
         cur.execute(select, [photo.photo_date, photo.photo_name])
         row = cur.fetchone()
         if row is None:
+            print("No")
             ins = conn.cursor()
             ins.execute(insert, [photo.photo_date, photo.photo_name, photo.file_name, photo.exif_image_length,
                                  photo.exif_image_width, photo.image_datetime, photo.gps_lat, photo.gps_lon,
                                  photo.camera_make, photo.camera_model, photo.orientation])
             db_record_location(photo)
         else:
+            print("Yes")
+            print("Comparing the size...............................: ", end='')
             if (row[0] == photo.exif_image_length) and (row[1] == photo.exif_image_width):
-                print("Photo is already in the database")
+                print("OK")
                 db_record_location(photo)
             else:
-                print("Error: Same photo but different size")
-                print("Photo date...: " + photo.photo_date)
-                print("Photo name...: " + photo.photo_name)
-                print("In DB, length: " + str(row[0]))
-                print("        width: " + str(row[1]))
-                print("New, length..: " + str(photo.exif_image_length))
-                print("     width...: " + str(photo.exif_image_width))
+                print("Error: different size")
+                print("Size of the current photo .................(L x W): " +
+                      str(photo.exif_image_length) + ' x ' + str(photo.exif_image_width))
+                print("Size of the photo found in the DB..........(L x W): " + str(row[0]) + ' x ' + str(row[1]))
     except sqlite3.Error as x:
         print("SQL Error: \n" + str(x))
 
@@ -256,15 +257,17 @@ def db_record_location(photo):
         '''
 
     try:
+        print("Checking if the location is in the database......: ", end='')
         cur = conn.cursor()
         cur.execute(select, [photo.photo_date, photo.photo_name, photo.dir_name])
         row = cur.fetchone()
         if row[0] == 0:
-            print("New location for photo: " + photo.dir_name)
+            print("No")
+            print("Inserting the new location.......................: " + photo.dir_name)
             ins = conn.cursor()
             ins.execute(insert, [photo.photo_date, photo.photo_name, photo.dir_name])
         else:
-            print("Location already in the DB: " + photo.dir_name)
+            print("Yes")
 
     except sqlite3.Error as x:
         print("SQL Error: \n" + str(x))
@@ -274,25 +277,26 @@ def copy_to_master_location(photo):
     global config, parm_copy
     master_location = config['master_location']
     master_dir_name = master_location + photo.photo_date
-    print("Current location....: " + photo.dir_name)
-    print("Expected location...: " + master_dir_name)
     if master_dir_name != photo.dir_name:
-        print("Checking if the photo is in the master location...", end='')
+        print("Checking if the photo is in the master location..: ", end='')
         if os.path.isfile(master_dir_name + os.sep + photo.file_name):
             print("Yes")
         else:
             print("No")
+            print("Copy to master location is turned................: ", end='')
             if parm_copy:
-                print("Copy to master location is turned on. Photo will be copied.")
+                print("On")
                 src_file = photo.dir_name + os.sep + photo.file_name
                 dst_file = master_dir_name + os.sep + photo.file_name
                 if not os.path.isdir(master_dir_name):
                     os.mkdir(master_dir_name)
-                print("Copying from: " + src_file)
-                print("          to: " + dst_file)
+                print("Copying from.....................................: " + src_file)
+                print("          to.....................................: " + dst_file)
                 shutil.copy2(src_file, dst_file)
                 photo.dir_name = master_dir_name
                 db_record_location(photo)
+            else:
+                print("Off")
 
 
 def get_date_from_dir(path):
@@ -320,8 +324,8 @@ def scan_dir(start_dir):
             else:
                 print(os.path.join(root, file))
                 count_others += 1
-    print("Fichiers jpeg trouvés..: %i" % count_jpeg)
-    print("Fichiers autres trouvés: %i" % count_others)
+    print("Fichiers jpeg trouvés............................: %i" % count_jpeg)
+    print("Fichiers autres trouvés..........................: %i" % count_others)
 
 
 def parse_options():
@@ -358,8 +362,8 @@ def main():
         return 8
     start_dir = args[0]
     print("Paramètres:")
-    print("    Dossier de départ.........: %s" % start_dir)
-    print("    Option de copie...........: ", end='')
+    print("    Dossier de départ............................: %s" % start_dir)
+    print("    Option de copie..............................: ", end='')
     print("On" if parm_copy else "Off")
     print()
 
@@ -371,9 +375,9 @@ def main():
     if config['db_file'] is None:
         print("Error: The DB_FILE is missing from the [database] section in " + CONFIG_FILE)
         return 8
-    print("    Fichier de configuration..: " + CONFIG_FILE)
-    print("    Master Location...........: " + config['master_location'])
-    print("    Database file.............: " + config['db_file'])
+    print("    Fichier de configuration.....................: " + CONFIG_FILE)
+    print("    Master Location..............................: " + config['master_location'])
+    print("    Database file................................: " + config['db_file'])
     print()
 
     conn = sqlite3.connect(config['db_file'])
