@@ -39,10 +39,10 @@ class Photo(object):
         self.exif_unique_id = None
         self.gps_latitude = None
         self.gps_latitude_ref = None
-        self.gps_lat = None
+        self.gps_latitude_dec = None
         self.gps_longitude = None
         self.gps_longitude_ref = None
-        self.gps_lon = None
+        self.gps_longitude_dec = None
         self.image_datetime = None
         self.camera_make = None
         self.camera_model = None
@@ -94,11 +94,11 @@ class Photo(object):
         l_exif_iso_speed = self.exif_iso_speed or "Not defined"
         l_exif_unique_id = self.exif_unique_id or "Not defined"
         l_gps_latitude = str(self.gps_latitude) or "Not defined"
-        l_gps_lat = self.gps_lat or "Not defined"
+        l_gps_latitude_dec = self.gps_latitude_dec or 0.0
         l_gps_latitude_ref = self.gps_latitude_ref or "Not defined"
         l_gps_longitude = str(self.gps_longitude) or "Not defined"
         l_gps_longitude_ref = self.gps_longitude_ref or "Not defined"
-        l_gps_lon = self.gps_lon or "Not defined"
+        l_gps_longitude_dec = self.gps_longitude_dec or 0.0
         l_image_datetime = self.image_datetime or "Not defined"
         l_camera_make = self.camera_make or "Not defined"
         l_camera_model = self.camera_model or "Not defined"
@@ -118,10 +118,10 @@ class Photo(object):
                "    EXIF Unique ID...............................: " + l_exif_unique_id + "\n" + \
                "    GPS Latitude.................................: " + l_gps_latitude + "\n" + \
                "    GPS Latitude Ref.............................: " + l_gps_latitude_ref + "\n" + \
-               "    GPS Latitude (fixed).........................: " + l_gps_lat + "\n" + \
+               "    GPS Latitude (decimal).......................: %-8.4f" % l_gps_latitude_dec + "\n" + \
                "    GPS Longitude................................: " + l_gps_longitude + "\n" + \
                "    GPS Longitude Ref............................: " + l_gps_longitude_ref + "\n" + \
-               "    GPS Longitude(fixed).........................: " + l_gps_lon + "\n" + \
+               "    GPS Longitude(decimal).......................: %-8.4f" % l_gps_longitude_dec + "\n" + \
                "    Image DateTime...............................: " + l_image_datetime + "\n" + \
                "    Camera Make..................................: " + l_camera_make + "\n" + \
                "    Camera Model.................................: " + l_camera_model + "\n" + \
@@ -142,25 +142,19 @@ class Photo(object):
 
         # Reformat GPS Lat/Lon
         if self.gps_latitude is not None:
-            self.gps_lat = str(self.gps_latitude[0]) + '.'
-            if self.gps_latitude[1].den == 1:
-                self.gps_lat += str(self.gps_latitude[1])
-                self.gps_lat += '.'
-                min_sec = float(self.gps_latitude[2].num) / float(self.gps_latitude[2].den)
-            else:
-                min_sec = float(self.gps_latitude[1].num) / float(self.gps_latitude[1].den)
-            self.gps_lat += str(min_sec)
-            self.gps_lat += self.gps_latitude_ref
+            degree = float(self.gps_latitude[0].num) / float(self.gps_latitude[0].den)
+            minute = float(self.gps_latitude[1].num) / float(self.gps_latitude[1].den) / 60
+            second = float(self.gps_latitude[2].num) / float(self.gps_latitude[2].den) / 3600
+            self.gps_latitude_dec = degree + minute + second
+            if self.gps_latitude_ref == 'S':
+                self.gps_latitude_dec *= -1
         if self.gps_longitude is not None:
-            self.gps_lon = str(self.gps_longitude[0]) + '.'
-            if self.gps_longitude[1].den == 1:
-                self.gps_lon += str(self.gps_longitude[1])
-                self.gps_lon += '.'
-                min_sec = float(self.gps_longitude[2].num) / float(self.gps_longitude[2].den)
-            else:
-                min_sec = float(self.gps_longitude[1].num) / float(self.gps_longitude[1].den)
-            self.gps_lon += str(min_sec)
-            self.gps_lon += self.gps_longitude_ref
+            degree = float(self.gps_longitude[0].num) / float(self.gps_longitude[0].den)
+            minute = float(self.gps_longitude[1].num) / float(self.gps_longitude[1].den) / 60
+            second = float(self.gps_longitude[2].num) / float(self.gps_longitude[2].den) / 3600
+            self.gps_longitude_dec = degree + minute + second
+            if self.gps_longitude_ref == 'W':
+                self.gps_longitude_dec *= -1
 
         # Try hard to find a date
         if self.photo_date == '0001-01-01':
@@ -223,7 +217,8 @@ def db_record_photo(photo):
             print("No")
             ins = conn.cursor()
             ins.execute(insert, [photo.photo_date, photo.photo_name, photo.file_name, photo.exif_image_length,
-                                 photo.exif_image_width, photo.image_datetime, photo.gps_lat, photo.gps_lon,
+                                 photo.exif_image_width, photo.image_datetime,
+                                 photo.gps_latitude_dec, photo.gps_longitude_dec,
                                  photo.camera_make, photo.camera_model, photo.orientation])
             db_record_location(photo)
         else:
