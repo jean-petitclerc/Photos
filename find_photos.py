@@ -314,7 +314,6 @@ def scan_dir(start_dir):
             if (file.endswith(".jpg") or file.endswith(".jpeg") or
                     file.endswith(".JPG") or file.endswith(".JPEG")):
                 count_jpeg += 1
-                # print(os.path.join(root, file))
                 get_exif_data(root, file)
             else:
                 print(os.path.join(root, file))
