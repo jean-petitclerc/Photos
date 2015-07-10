@@ -5,8 +5,8 @@ create table photo (
   image_length int,
   image_width int,
   image_datetime text,
-  gps_latitude text,
-  gps_longitude text,
+  gps_latitude real,
+  gps_longitude real,
   camera_make text,
   camera_model text,
   orientation text)
