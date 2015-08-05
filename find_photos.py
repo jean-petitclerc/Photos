@@ -13,6 +13,7 @@ import exifread
 # Global variable
 config = {}
 conn = None  # DB handle
+counts = {'copy':0, 'no_copy':0, 'copy_skip':0}
 
 
 # Global constant
@@ -269,13 +270,14 @@ def db_record_location(photo):
 
 
 def copy_to_master_location(photo):
-    global config, parm_copy
+    global config, parm_copy, counts
     master_location = config['master_location']
     master_dir_name = master_location + photo.photo_date
     if master_dir_name != photo.dir_name:
         print("Checking if the photo is in the master location..: ", end='')
         if os.path.isfile(master_dir_name + os.sep + photo.file_name):
             print("Yes")
+            counts['no_copy'] += 1
         else:
             print("No")
             print("Copy to master location is turned................: ", end='')
@@ -288,10 +290,12 @@ def copy_to_master_location(photo):
                 print("Copying from.....................................: " + src_file)
                 print("          to.....................................: " + dst_file)
                 shutil.copy2(src_file, dst_file)
+                counts['copy'] += 1
                 photo.dir_name = master_dir_name
                 db_record_location(photo)
             else:
                 print("Off")
+                counts['copy_skip'] += 1
 
 
 def get_date_from_dir(path):
@@ -378,6 +382,9 @@ def main():
     scan_dir(start_dir)
     conn.commit()
     conn.close()
+    print("Photos copied....................................: " + str(counts['copy']))
+    print("Photos already in master location................: " + str(counts['no_copy']))
+    print("Photos not copied, not requested to copy.........: " + str(counts['copy_skip']))
     print("\nEnding " + sys.argv[0] + "\n")
     return 0
 
