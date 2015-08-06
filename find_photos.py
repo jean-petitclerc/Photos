@@ -159,10 +159,10 @@ class Photo(object):
 
         # Try hard to find a date
         if self.photo_date == '0001-01-01':
-            if self.image_datetime is not None:
-                self.photo_date = self.image_datetime[0:10]
-            elif self.exif_datetime_original is not None:
+            if self.exif_datetime_original is not None:
                 self.photo_date = self.exif_datetime_original[0:10]
+            elif self.image_datetime is not None:
+                self.photo_date = self.image_datetime[0:10]
             else:
                 print("No date found for this photo: " + self.photo_name)
 
