@@ -13,7 +13,7 @@ import exifread
 # Global variable
 config = {}
 conn = None  # DB handle
-counts = {'copy':0, 'no_copy':0, 'copy_skip':0}
+counts = {'copy':0, 'no_copy':0, 'copy_skip':0, 'rejects':0}
 
 
 # Global constant
@@ -22,6 +22,7 @@ CONFIG_FILE = 'config' + os.sep + 'photos.cfg'
 
 # parms
 parm_copy = False
+parm_rejects = False
 
 
 class Photo(object):
@@ -310,6 +311,20 @@ def get_date_from_dir(path):
         return '0001-01-01'
 
 
+def copy_reject(root, file_name):
+    global counts
+    if parm_rejects:
+        rejects_dir = root + os.sep + 'rejects'
+        src_file = root + os.sep + file_name
+        dst_file = rejects_dir + os.sep + file_name
+        if not os.path.isdir(rejects_dir):
+            os.mkdir(rejects_dir)
+        print("Copying to.......................................: " + rejects_dir)
+        print()
+        shutil.copy2(src_file, dst_file)
+        counts['rejects'] += 1
+
+
 def scan_dir(start_dir):
     count_jpeg = 0
     count_others = 0
@@ -321,6 +336,7 @@ def scan_dir(start_dir):
                 get_exif_data(root, file)
             else:
                 print(os.path.join(root, file))
+                copy_reject(root, file)
                 count_others += 1
     print("Fichiers jpeg trouvés............................: %i" % count_jpeg)
     print("Fichiers autres trouvés..........................: %i" % count_others)
@@ -332,8 +348,10 @@ def parse_options():
     parser = OptionParser(usage=usage)
     parser.add_option("-c", "--copy", dest="copy", action="store_true", default=False,
                       help="Copy the photo to the expected location if needed.")
+    parser.add_option("-r", "--rejects", dest="rejects", action="store_true", default=False,
+                      help="Copy non-jpeg files to a reject folder.")
     (options, args) = parser.parse_args()
-    return options, args  # options: copy; args: starting_directory
+    return options, args  # options: copy, rejects; args: starting_directory
 
 
 def parse_configs():
@@ -350,11 +368,12 @@ def parse_configs():
 
 
 def main():
-    global parm_copy, conn, config
+    global parm_copy, parm_rejects, conn, config
     print("Starting " + sys.argv[0] + "\n")
     # Get parameters and validate them
     (options, args) = parse_options()
     parm_copy = options.copy
+    parm_rejects = options.rejects
     if len(args) < 1:
         print("Ce programme a besoin d'un argument, le dossier de départ.")
         return 8
@@ -363,6 +382,8 @@ def main():
     print("    Dossier de départ............................: %s" % start_dir)
     print("    Option de copie..............................: ", end='')
     print("On" if parm_copy else "Off")
+    print("    Option de rejet..............................: ", end='')
+    print("On" if parm_rejects else "Off")
     print()
 
     config = parse_configs()
@@ -385,6 +406,7 @@ def main():
     print("Photos copied....................................: " + str(counts['copy']))
     print("Photos already in master location................: " + str(counts['no_copy']))
     print("Photos not copied, not requested to copy.........: " + str(counts['copy_skip']))
+    print("Non-jpeg files copied to reject folders..........: " + str(counts['rejects']))
     print("\nEnding " + sys.argv[0] + "\n")
     return 0
 
