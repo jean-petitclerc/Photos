@@ -21,8 +21,7 @@ CONFIG_FILE = 'config' + os.sep + 'photos.cfg'
 
 
 # parms
-parm_copy = False
-parm_rejects = False
+parm = {'copy':False, 'rejects':False}
 
 
 class Photo(object):
@@ -169,7 +168,7 @@ class Photo(object):
 
 
 def get_exif_data(photo_dir, photo_file):
-    global parm_copy
+    global parm
     print("Dossier de la photo..............................: %s" % photo_dir)
     print("Nom de la photo..................................: %s" % photo_file)
     photo_date = get_date_from_dir(photo_dir)
@@ -271,7 +270,7 @@ def db_record_location(photo):
 
 
 def copy_to_master_location(photo):
-    global config, parm_copy, counts
+    global config, parm, counts
     master_location = config['master_location']
     master_dir_name = master_location + photo.photo_date
     if master_dir_name != photo.dir_name:
@@ -282,7 +281,7 @@ def copy_to_master_location(photo):
         else:
             print("No")
             print("Copy to master location is turned................: ", end='')
-            if parm_copy:
+            if parm["copy"]:
                 print("On")
                 src_file = photo.dir_name + os.sep + photo.file_name
                 dst_file = master_dir_name + os.sep + photo.file_name
@@ -313,7 +312,7 @@ def get_date_from_dir(path):
 
 def copy_reject(root, file_name):
     global counts
-    if parm_rejects:
+    if parm["rejects"]:
         rejects_dir = root + os.sep + 'rejects'
         src_file = root + os.sep + file_name
         dst_file = rejects_dir + os.sep + file_name
@@ -368,12 +367,12 @@ def parse_configs():
 
 
 def main():
-    global parm_copy, parm_rejects, conn, config
+    global parm, conn, config
     print("Starting " + sys.argv[0] + "\n")
     # Get parameters and validate them
     (options, args) = parse_options()
-    parm_copy = options.copy
-    parm_rejects = options.rejects
+    parm["copy"] = options.copy
+    parm["rejects"] = options.rejects
     if len(args) < 1:
         print("Ce programme a besoin d'un argument, le dossier de départ.")
         return 8
@@ -381,9 +380,9 @@ def main():
     print("Paramètres:")
     print("    Dossier de départ............................: %s" % start_dir)
     print("    Option de copie..............................: ", end='')
-    print("On" if parm_copy else "Off")
+    print("On" if parm["copy"] else "Off")
     print("    Option de rejet..............................: ", end='')
-    print("On" if parm_rejects else "Off")
+    print("On" if parm["rejects"] else "Off")
     print()
 
     config = parse_configs()
