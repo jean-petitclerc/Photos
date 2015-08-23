@@ -58,12 +58,14 @@ def inspect_locations():
         delete from photo_location
          where dir_name = ?
            and photo_name = ?
+           and photo_date = ?
         '''
 
     try:
         print("Checking if the locations are all valid...")
         cur = conn.cursor()
         cur.execute(select, [])
+        delete_handle = conn.cursor()
         last_photo_name = None
         last_photo_date = None
         row = cur.fetchone()
@@ -80,13 +82,15 @@ def inspect_locations():
                 last_photo_name = photo_name
                 last_photo_date = photo_date
             complete_file_name = dir_name + os.sep + file_name
-            print("    Location: %s80 : " % complete_file_name, end='')
+            print("    Location: %80s : " % complete_file_name, end='')
             if os.path.isfile(complete_file_name):
                 print("Found")
                 counts["found"] += 1
             else:
                 print("Not Found")
                 counts["not_found"] += 1
+                if parm["clean"]:
+                   delete_handle.execute(delete, [dir_name, photo_name, photo_date])
             row = cur.fetchone()
         print()
 

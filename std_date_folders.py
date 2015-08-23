@@ -21,7 +21,8 @@ def scan_dir(start_dir, cur_dt_fmt):
 
 def main():
     if (len(sys.argv) - 1) < 2:
-        print("Ce programme a besoin de deux arguments, le dossier de depart et le format de date MDY ou DMY.")
+        print("Ce programme a besoin de deux arguments, "
+              "le dossier de depart et le format de date MDY ou DMY.")
         return 8
     start_dir = sys.argv[1]
     cur_dt_fmt = sys.argv[2]
