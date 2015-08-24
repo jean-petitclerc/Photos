@@ -13,7 +13,7 @@ import exifread
 # Global variable
 config = {}
 conn = None  # DB handle
-counts = {'copy':0, 'no_copy':0, 'copy_skip':0, 'rejects':0}
+counts = {'copy': 0, 'no_copy': 0, 'copy_skip': 0, 'rejects': 0, 'backup': 0, 'no_backup': 0, 'backup_skip': 0}
 
 
 # Global constant
@@ -21,7 +21,7 @@ CONFIG_FILE = 'config' + os.sep + 'photos.cfg'
 
 
 # parms
-parm = {'copy':False, 'rejects':False}
+parm = {'copy':False, 'rejects':False, 'backup':False}
 
 
 class Photo(object):
@@ -167,7 +167,7 @@ class Photo(object):
                 print("No date found for this photo: " + self.photo_name)
 
 
-def get_exif_data(photo_dir, photo_file):
+def get_exif_data(start_dir, photo_dir, photo_file):
     global parm
     print("Dossier de la photo..............................: %s" % photo_dir)
     print("Nom de la photo..................................: %s" % photo_file)
@@ -189,6 +189,7 @@ def get_exif_data(photo_dir, photo_file):
     print(photo)
     db_record_photo(photo)
     copy_to_master_location(photo)
+    copy_to_backup_location(start_dir, photo)
     print()
 
 
@@ -298,6 +299,38 @@ def copy_to_master_location(photo):
                 counts['copy_skip'] += 1
 
 
+def copy_to_backup_location(start_dir, photo):
+    global config, parm, counts
+    backup_location = config['backup_location']
+    start_dir_length = len(start_dir)
+    backup_dir_name = backup_location + photo.dir_name[start_dir_length:]
+    #print('Backup folder: ' + backup_dir_name)
+    #dst_file = backup_dir_name + os.sep + photo.file_name
+    #print('Destination file: ' + dst_file)
+    print("Checking if the photo is in the backup location..: ", end='')
+    if os.path.isfile(backup_dir_name + os.sep + photo.file_name):
+        print("Yes")
+        counts['no_backup'] += 1
+    else:
+        print("No")
+        print("Copy to backup location is turned................: ", end='')
+        if parm["backup"]:
+            print("On")
+            src_file = photo.dir_name + os.sep + photo.file_name
+            dst_file = backup_dir_name + os.sep + photo.file_name
+            print('Destination file: ' + dst_file)
+            if not os.path.isdir(backup_dir_name):
+                os.makedirs(backup_dir_name)
+                print("Copying to.......................................: " + dst_file)
+                shutil.copy2(src_file, dst_file)
+                counts['backup'] += 1
+                photo.dir_name = backup_dir_name
+                db_record_location(photo)
+        else:
+            print("Off")
+            counts['backup_skip'] += 1
+
+
 def get_date_from_dir(path):
     import re
 
@@ -332,7 +365,7 @@ def scan_dir(start_dir):
             if (file.endswith(".jpg") or file.endswith(".jpeg") or
                     file.endswith(".JPG") or file.endswith(".JPEG")):
                 count_jpeg += 1
-                get_exif_data(root, file)
+                get_exif_data(start_dir, root, file)
             else:
                 print(os.path.join(root, file))
                 copy_reject(root, file)
@@ -346,7 +379,9 @@ def parse_options():
     usage = "usage: %prog [options] starting_directory"
     parser = OptionParser(usage=usage)
     parser.add_option("-c", "--copy", dest="copy", action="store_true", default=False,
-                      help="Copy the photo to the expected location if needed.")
+                      help="Copy the photo to the expected location, if needed.")
+    parser.add_option("-b", "--backup", dest="backup", action="store_true", default=False,
+                      help="Copy the photos to the backup location, if needed.")
     parser.add_option("-r", "--rejects", dest="rejects", action="store_true", default=False,
                       help="Copy non-jpeg files to a reject folder.")
     (options, args) = parser.parse_args()
@@ -359,7 +394,10 @@ def parse_configs():
         cfg_parser = configparser.ConfigParser()
         cfg_parser.read(CONFIG_FILE)
         config['master_location'] = cfg_parser['default']['MASTER_LOCATION']
+        config['backup_location'] = cfg_parser['default']['BACKUP_LOCATION']
         config['db_file'] = cfg_parser['database']['DB_FILE']
+        if config['backup_location'][-1] == os.sep:
+            config['backup_location'] = config['backup_location'][0:-1]
     except Exception as x:
         print("Error: Could not read the configuration file: " + CONFIG_FILE)
         print(x)
@@ -372,6 +410,7 @@ def main():
     # Get parameters and validate them
     (options, args) = parse_options()
     parm["copy"] = options.copy
+    parm["backup"] = options.backup
     parm["rejects"] = options.rejects
     if len(args) < 1:
         print("Ce programme a besoin d'un argument, le dossier de départ.")
@@ -381,6 +420,8 @@ def main():
     print("    Dossier de départ............................: %s" % start_dir)
     print("    Option de copie..............................: ", end='')
     print("On" if parm["copy"] else "Off")
+    print("    Option de backup.............................: ", end='')
+    print("On" if parm["backup"] else "Off")
     print("    Option de rejet..............................: ", end='')
     print("On" if parm["rejects"] else "Off")
     print()
@@ -390,11 +431,16 @@ def main():
     if config['master_location'] is None:
         print("Error: The MASTER_LOCATION is missing from the [default] section in " + CONFIG_FILE)
         return 8
+    if parm["backup"] and config['backup_location'] is None:
+        print("Error: The BACKUP_LOCATION is missing from the [default] section in " + CONFIG_FILE)
+        return 8
     if config['db_file'] is None:
         print("Error: The DB_FILE is missing from the [database] section in " + CONFIG_FILE)
         return 8
     print("    Fichier de configuration.....................: " + CONFIG_FILE)
     print("    Master Location..............................: " + config['master_location'])
+    if parm["backup"]:
+        print("    Backup Location..............................: " + config['backup_location'])
     print("    Database file................................: " + config['db_file'])
     print()
 
@@ -405,6 +451,9 @@ def main():
     print("Photos copied....................................: " + str(counts['copy']))
     print("Photos already in master location................: " + str(counts['no_copy']))
     print("Photos not copied, not requested to copy.........: " + str(counts['copy_skip']))
+    print("Photos backed up.................................: " + str(counts['backup']))
+    print("Photos already in backup location................: " + str(counts['no_backup']))
+    print("Photos not copied, not requested to backup.......: " + str(counts['backup_skip']))
     print("Non-jpeg files copied to reject folders..........: " + str(counts['rejects']))
     print("\nEnding " + sys.argv[0] + "\n")
     return 0
